@@ -2559,6 +2559,24 @@ class Map extends Camera {
     }
 
     /**
+     * Force a synchronous redraw of the map.
+     * @example
+     * map.redraw();
+     * @returns {Map} this
+     */
+    redraw() {
+        if (this.style) {
+            // cancel the scheduled update
+            if (this._frame) {
+                this._frame.cancel();
+                this._frame = null;
+            }
+            this._render(0);
+        }
+        return this;
+    }
+
+    /**
      * Clean up and release all internal resources associated with this map.
      *
      * This includes DOM elements, event bindings, web workers, and WebGL resources.

@@ -994,6 +994,18 @@ test('Map', (t) => {
         });
     });
 
+    t.test('#redraw', (t) => {
+        const map = createMap(t);
+
+        map.on('style.load', () => {
+            t.spy(map, '_render');
+            map.redraw();
+            t.ok(map._render.called);
+
+            t.end();
+        });
+    });
+
     t.test('#addControl', (t) => {
         const map = createMap(t);
         const control = {
