@@ -11,11 +11,6 @@ test('browser', (t) => {
         });
     });
 
-    t.test('now', (t) => {
-        t.equal(typeof browser.now(), 'number');
-        t.end();
-    });
-
     t.test('frame', (t) => {
         const frame = browser.frame(() => {
             t.fail();

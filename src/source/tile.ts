@@ -7,7 +7,6 @@ import featureFilter from '../style-spec/feature_filter';
 import SymbolBucket from '../data/bucket/symbol_bucket';
 import {CollisionBoxArray} from '../data/array_types';
 import Texture from '../render/texture';
-import browser from '../util/browser';
 import toEvaluationFeature from '../data/evaluation_feature';
 import EvaluationParameters from '../style/evaluation_parameters';
 import SourceFeatureState from '../source/source_state';
@@ -117,7 +116,7 @@ class Tile {
 
     registerFadeDuration(duration: number) {
         const fadeEndTime = duration + this.timeAdded;
-        if (fadeEndTime < browser.now()) return;
+        if (fadeEndTime < window.performance.now()) return;
         if (this.fadeEndTime && fadeEndTime < this.fadeEndTime) return;
 
         this.fadeEndTime = fadeEndTime;
@@ -427,7 +426,7 @@ class Tile {
     }
 
     symbolFadeFinished(): boolean {
-        return !this.symbolFadeHoldUntil || this.symbolFadeHoldUntil < browser.now();
+        return !this.symbolFadeHoldUntil || this.symbolFadeHoldUntil < window.performance.now();
     }
 
     clearFadeHold() {
@@ -435,7 +434,7 @@ class Tile {
     }
 
     setHoldDuration(duration: number) {
-        this.symbolFadeHoldUntil = browser.now() + duration;
+        this.symbolFadeHoldUntil = window.performance.now() + duration;
     }
 
     setDependencies(namespace: string, dependencies: Array<string>) {

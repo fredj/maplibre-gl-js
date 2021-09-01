@@ -2481,7 +2481,7 @@ class Map extends Camera {
         if (this.listens('gpu-timing-frame')) {
             gpuTimer = extTimerQuery.createQueryEXT();
             extTimerQuery.beginQueryEXT(extTimerQuery.TIME_ELAPSED_EXT, gpuTimer);
-            frameStartTime = browser.now();
+            frameStartTime = window.performance.now();
         }
 
         // A custom layer may have used the context asynchronously. Mark the state as dirty.
@@ -2501,7 +2501,7 @@ class Map extends Camera {
             this._styleDirty = false;
 
             const zoom = this.transform.zoom;
-            const now = browser.now();
+            const now = window.performance.now();
             this.style.zoomHistory.update(zoom, now);
 
             const parameters = new EvaluationParameters(zoom, {
@@ -2562,7 +2562,7 @@ class Map extends Camera {
         }
 
         if (this.listens('gpu-timing-frame')) {
-            const renderCPUTime = browser.now() - frameStartTime;
+            const renderCPUTime = window.performance.now() - frameStartTime;
             extTimerQuery.endQueryEXT(extTimerQuery.TIME_ELAPSED_EXT, gpuTimer);
             setTimeout(() => {
                 const renderGPUTime = extTimerQuery.getQueryObjectEXT(gpuTimer, extTimerQuery.QUERY_RESULT_EXT) / (1000 * 1000);

@@ -941,9 +941,9 @@ test('camera', (t) => {
 
             let startTime;
             camera
-                .on('movestart', () => { startTime = browser.now(); })
+                .on('movestart', () => { startTime = window.performance.now(); })
                 .on('moveend', () => {
-                    const endTime = browser.now();
+                    const endTime = window.performance.now();
                     const timeDiff = endTime - startTime;
                     t.ok(timeDiff >= min && timeDiff < max, `Camera transition time exceeded expected range( [${min},${max}) ) :${timeDiff}`);
                     t.end();

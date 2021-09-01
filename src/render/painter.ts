@@ -363,7 +363,7 @@ class Painter {
         this.imageManager = style.imageManager;
         this.glyphManager = style.glyphManager;
 
-        this.symbolFadeChange = style.placement.symbolFadeChange(browser.now());
+        this.symbolFadeChange = style.placement.symbolFadeChange(window.performance.now());
 
         this.imageManager.beginFrame();
 

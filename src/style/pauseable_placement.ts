@@ -92,10 +92,10 @@ class PauseablePlacement {
         layers: {[_: string]: StyleLayer},
         layerTiles: {[_: string]: Array<Tile>}
     ) {
-        const startTime = browser.now();
+        const startTime = window.performance.now();
 
         const shouldPausePlacement = () => {
-            const elapsedTime = browser.now() - startTime;
+            const elapsedTime = window.performance.now() - startTime;
             return this._forceFullPlacement ? false : elapsedTime > 2;
         };
 

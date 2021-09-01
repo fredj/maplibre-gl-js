@@ -2,7 +2,6 @@ import assert from 'assert';
 import DOM from '../../util/dom';
 
 import {ease as _ease, bindAll, bezier} from '../../util/util';
-import browser from '../../util/browser';
 import {number as interpolate} from '../../style-spec/util/interpolate';
 import LngLat from '../../geo/lng_lat';
 
@@ -149,7 +148,7 @@ class ScrollZoomHandler {
     wheel(e: WheelEvent) {
         if (!this.isEnabled()) return;
         let value = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? e.deltaY * 40 : e.deltaY;
-        const now = browser.now(),
+        const now = window.performance.now(),
             timeDelta = now - (this._lastWheelEventTime || 0);
 
         this._lastWheelEventTime = now;
@@ -277,7 +276,7 @@ class ScrollZoomHandler {
         if (this._type === 'wheel' && startZoom && easing) {
             assert(easing && typeof startZoom === 'number');
 
-            const t = Math.min((browser.now() - this._lastWheelEventTime) / 200, 1);
+            const t = Math.min((window.performance.now() - this._lastWheelEventTime) / 200, 1);
             const k = easing(t);
             zoom = interpolate(startZoom, targetZoom, k);
             if (t < 1) {
@@ -318,7 +317,7 @@ class ScrollZoomHandler {
 
         if (this._prevEase) {
             const ease = this._prevEase,
-                t = (browser.now() - ease.start) / ease.duration,
+                t = (window.performance.now() - ease.start) / ease.duration,
                 speed = ease.easing(t + 0.01) - ease.easing(t),
 
                 // Quick hack to make new bezier that is continuous with last
@@ -329,7 +328,7 @@ class ScrollZoomHandler {
         }
 
         this._prevEase = {
-            start: browser.now(),
+            start: window.performance.now(),
             duration,
             easing
         };

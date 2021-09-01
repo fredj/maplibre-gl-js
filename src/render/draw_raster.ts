@@ -1,7 +1,6 @@
 import {clamp} from '../util/util';
 
 import ImageSource from '../source/image_source';
-import browser from '../util/browser';
 import StencilMode from '../gl/stencil_mode';
 import DepthMode from '../gl/depth_mode';
 import CullFaceMode from '../gl/cull_face_mode';
@@ -82,7 +81,7 @@ function getFadeValues(tile, parentTile, sourceCache, layer, transform) {
     const fadeDuration = layer.paint.get('raster-fade-duration');
 
     if (fadeDuration > 0) {
-        const now = browser.now();
+        const now = window.performance.now();
         const sinceTile = (now - tile.timeAdded) / fadeDuration;
         const sinceParent = parentTile ? (now - parentTile.timeAdded) / fadeDuration : -1;
 

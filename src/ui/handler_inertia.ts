@@ -1,4 +1,3 @@
-import browser from '../util/browser';
 import type Map from './map';
 import {bezier, clamp, extend} from '../util/util';
 import Point from '../util/point';
@@ -56,12 +55,12 @@ export default class HandlerInertia {
 
     record(settings: any) {
         this._drainInertiaBuffer();
-        this._inertiaBuffer.push({time: browser.now(), settings});
+        this._inertiaBuffer.push({time: window.performance.now(), settings});
     }
 
     _drainInertiaBuffer() {
         const inertia = this._inertiaBuffer,
-            now = browser.now(),
+            now = window.performance.now(),
             cutoff = 160;   //msec
 
         while (inertia.length > 0 && now - inertia[0].time > cutoff)

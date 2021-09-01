@@ -727,9 +727,9 @@ test('SourceCache#update', (t) => {
 
         const sourceCache = createSourceCache({
             loadTile(tile, callback) {
-                tile.timeAdded = browser.now();
+                tile.timeAdded = window.performance.now();
                 tile.state = 'loaded';
-                tile.fadeEndTime = browser.now() + fadeTime;
+                tile.fadeEndTime = window.performance.now() + fadeTime;
                 callback();
             }
         });

@@ -8,7 +8,6 @@ import {keysDifference} from '../util/util';
 import EXTENT from '../data/extent';
 import Context from '../gl/context';
 import Point from '../util/point';
-import browser from '../util/browser';
 import {OverscaledTileID} from './tile_id';
 import assert from 'assert';
 import SourceFeatureState from './source_state';
@@ -259,7 +258,7 @@ class SourceCache extends Evented {
             return;
         }
 
-        tile.timeAdded = browser.now();
+        tile.timeAdded = window.performance.now();
         if (previousState === 'expired') tile.refreshedUponExpiration = true;
         this._setTileReloadTimer(id, tile);
         if (this.getSource().type === 'raster-dem' && tile.dem) this._backfillDEM(tile);
@@ -526,7 +525,7 @@ class SourceCache extends Evented {
                 assert(tileID.key === id);
 
                 const tile = this._tiles[id];
-                if (!tile || tile.fadeEndTime && tile.fadeEndTime <= browser.now()) continue;
+                if (!tile || tile.fadeEndTime && tile.fadeEndTime <= window.performance.now()) continue;
 
                 // if the tile is loaded but still fading in, find parents to cross-fade with it
                 const parentTile = this.findLoadedParent(tileID, minCoveringZoom);
@@ -876,7 +875,7 @@ class SourceCache extends Evented {
         if (isRasterType(this._source.type)) {
             for (const id in this._tiles) {
                 const tile = this._tiles[id];
-                if (tile.fadeEndTime !== undefined && tile.fadeEndTime >= browser.now()) {
+                if (tile.fadeEndTime !== undefined && tile.fadeEndTime >= window.performance.now()) {
                     return true;
                 }
             }

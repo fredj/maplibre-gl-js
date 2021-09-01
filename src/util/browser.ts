@@ -1,9 +1,5 @@
 import type {Cancelable} from '../types/cancelable';
 
-const now = performance && performance.now ?
-    performance.now.bind(performance) :
-    Date.now.bind(Date);
-
 let linkEl;
 
 let reducedMotionQuery: MediaQueryList;
@@ -12,12 +8,6 @@ let reducedMotionQuery: MediaQueryList;
  * @private
  */
 const exported = {
-    /**
-     * Provides a function that outputs milliseconds: either performance.now()
-     * or a fallback to Date.now()
-     */
-    now,
-
     frame(fn: (paintStartTimestamp: number) => void): Cancelable {
         const frame = requestAnimationFrame(fn);
         return {cancel: () => cancelAnimationFrame(frame)};

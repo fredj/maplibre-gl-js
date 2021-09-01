@@ -1201,7 +1201,7 @@ abstract class Camera extends Evented {
             frame(1);
             finish();
         } else {
-            this._easeStart = browser.now();
+            this._easeStart = window.performance.now();
             this._easeOptions = options;
             this._onEaseFrame = frame;
             this._onEaseEnd = finish;
@@ -1211,7 +1211,7 @@ abstract class Camera extends Evented {
 
     // Callback for map._requestRenderFrame
     _renderFrameCallback() {
-        const t = Math.min((browser.now() - this._easeStart) / this._easeOptions.duration, 1);
+        const t = Math.min((window.performance.now() - this._easeStart) / this._easeOptions.duration, 1);
         this._onEaseFrame(this._easeOptions.easing(t));
         if (t < 1) {
             this._easeFrameId = this._requestRenderFrame(this._renderFrameCallback);
