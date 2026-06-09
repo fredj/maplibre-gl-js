@@ -1,6 +1,7 @@
 ## main
 ### ✨ Features and improvements
 - _...Add new stuff here..._
+- Add `map.captureImageData()` to render the current view into an `ImageData` without requiring `preserveDrawingBuffer: true` (by [@fredj](https://github.com/fredj))
 - Build main and worker in same build context to extract shared chunk ([#7745](https://github.com/maplibre/maplibre-gl-js/pull/7745)) (by [@dangkyokhoang](https://github.com/dangkyokhoang))
 
 ### 🐞 Bug fixes

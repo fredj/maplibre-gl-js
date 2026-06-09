@@ -74,6 +74,6 @@ export function drawCustom(painter: Painter, tileManager: TileManager, layer: Cu
 
         context.setDirty();
         painter.setBaseState();
-        context.bindFramebuffer.set(null);
+        context.bindFramebuffer.set(painter.mainFramebuffer);
     }
 }

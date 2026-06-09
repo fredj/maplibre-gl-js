@@ -151,6 +151,18 @@ export class Painter {
     // of the terrain-facilitators. e.g. depth & coords framebuffers
     // every time the camera-matrix changes the terrain-facilitators will be redrawn.
     terrainFacilitator: {depthDirty: boolean; coordsDirty: boolean; matrix: mat4; renderTime: number};
+    /**
+     * Cached FBO for `captureImageData()`. Kept alive between calls (recreated only on
+     * resize) and used as the render target only while `_capturing` is true.
+     */
+    captureFramebuffer: Framebuffer | null;
+    /** True only during the `redraw()` call inside `captureImageData()`. */
+    _capturing: boolean;
+
+    /** The WebGL framebuffer for the main render target: capture FBO during capture, canvas (null) otherwise. */
+    get mainFramebuffer(): WebGLFramebuffer | null {
+        return this._capturing ? this.captureFramebuffer!.framebuffer : null;
+    }
 
     constructor(gl: WebGL2RenderingContext, transform: IReadonlyTransform) {
         this.drawFunctions = webglDrawFunctions;
@@ -159,6 +171,8 @@ export class Painter {
         this._tileTextures = {};
         this._rttObjectRecyclePool = [];
         this._rttSharedFbo = null;
+        this.captureFramebuffer = null;
+        this._capturing = false;
         this.terrainFacilitator = {depthDirty: true, coordsDirty: false, matrix: mat4.identity(new Float64Array(16)), renderTime: 0};
 
         this.setup();
@@ -568,7 +582,7 @@ export class Painter {
 
         // Rebind the main framebuffer now that all offscreen layers have been rendered:
         this.context.viewport.set([0, 0, this.width, this.height]);
-        this.context.bindFramebuffer.set(null);
+        this.context.bindFramebuffer.set(this.mainFramebuffer);
 
         // Clear buffers in preparation for drawing to the main framebuffer
         this.context.clear({color: options.showOverdrawInspector ? Color.black : Color.transparent, depth: 1});
@@ -898,6 +912,11 @@ export class Painter {
             obj.texture.destroy();
         }
         this._rttObjectRecyclePool = [];
+
+        if (this.captureFramebuffer) {
+            this.captureFramebuffer.destroy();
+            this.captureFramebuffer = null;
+        }
 
         if (this._rttSharedFbo) {
             // Detach so Framebuffer.destroy() doesn't delete the texture/renderbuffer

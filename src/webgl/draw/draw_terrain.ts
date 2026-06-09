@@ -78,7 +78,7 @@ function drawTerrain(painter: Painter, terrain: Terrain, tiles: Tile[], renderOp
     const depthMode = painter.getDepthModeFor3D();
     const program = painter.useProgram('terrain');
 
-    context.bindFramebuffer.set(null);
+    context.bindFramebuffer.set(painter.mainFramebuffer);
     context.viewport.set([0, 0, painter.width, painter.height]);
 
     for (const tile of tiles) {

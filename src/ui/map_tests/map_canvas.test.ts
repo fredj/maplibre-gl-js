@@ -101,3 +101,110 @@ describe('WebGLContextAttributes options', () => {
     });
 
 });
+
+describe('captureImageData', () => {
+    test('returns an ImageData with the correct dimensions', () => {
+        const container = window.document.createElement('div');
+        Object.defineProperty(container, 'clientWidth', {value: 256});
+        Object.defineProperty(container, 'clientHeight', {value: 128});
+        const map = createMap({container});
+        const gl = map.painter.context.gl;
+
+        vi.spyOn(gl, 'readPixels').mockImplementation(
+            (_x, _y, w, h, _format, _type, pixels) => {
+                if (pixels instanceof Uint8Array) {
+                    pixels.fill(128);
+                }
+            }
+        );
+
+        const imageData = map.captureImageData();
+
+        expect(imageData).toBeInstanceOf(ImageData);
+        expect(imageData.width).toBe(map.painter.width);
+        expect(imageData.height).toBe(map.painter.height);
+    });
+
+    test('uses an offscreen framebuffer, not the canvas default framebuffer', () => {
+        const container = window.document.createElement('div');
+        Object.defineProperty(container, 'clientWidth', {value: 64});
+        Object.defineProperty(container, 'clientHeight', {value: 64});
+        const map = createMap({container});
+        const context = map.painter.context;
+
+        const bindFramebufferSpy = vi.spyOn(context.gl, 'bindFramebuffer');
+
+        map.captureImageData();
+
+        const nullBindCalls = bindFramebufferSpy.mock.calls.filter(
+            ([_target, fb]) => fb === null
+        );
+        const nonNullBindCalls = bindFramebufferSpy.mock.calls.filter(
+            ([_target, fb]) => fb !== null
+        );
+        expect(nonNullBindCalls.length).toBeGreaterThan(0);
+        // The final restore to null should be present
+        expect(nullBindCalls.length).toBeGreaterThan(0);
+    });
+
+    test('cleans up FBO resources after capture', () => {
+        const container = window.document.createElement('div');
+        Object.defineProperty(container, 'clientWidth', {value: 64});
+        Object.defineProperty(container, 'clientHeight', {value: 64});
+        const map = createMap({container});
+        const gl = map.painter.context.gl;
+
+        const deleteFramebufferSpy = vi.spyOn(gl, 'deleteFramebuffer');
+        const deleteTextureSpy = vi.spyOn(gl, 'deleteTexture');
+        const deleteRenderbufferSpy = vi.spyOn(gl, 'deleteRenderbuffer');
+
+        map.captureImageData();
+
+        expect(deleteFramebufferSpy).toHaveBeenCalled();
+        expect(deleteTextureSpy).toHaveBeenCalled();
+        expect(deleteRenderbufferSpy).toHaveBeenCalled();
+    });
+
+    test('flips pixel rows from WebGL bottom-up to top-down', () => {
+        const container = window.document.createElement('div');
+        Object.defineProperty(container, 'clientWidth', {value: 2});
+        Object.defineProperty(container, 'clientHeight', {value: 2});
+        const map = createMap({container, pixelRatio: 1});
+        const gl = map.painter.context.gl;
+
+        // WebGL readPixels gives bottom row first.
+        // Row 0 (bottom in GL) = red, row 1 (top in GL) = blue.
+        vi.spyOn(gl, 'readPixels').mockImplementation(
+            (_x, _y, _w, _h, _format, _type, pixels) => {
+                if (pixels instanceof Uint8Array) {
+                    // bottom row: red
+                    pixels[0] = 255; pixels[1] = 0; pixels[2] = 0; pixels[3] = 255;
+                    pixels[4] = 255; pixels[5] = 0; pixels[6] = 0; pixels[7] = 255;
+                    // top row: blue
+                    pixels[8] = 0; pixels[9] = 0; pixels[10] = 255; pixels[11] = 255;
+                    pixels[12] = 0; pixels[13] = 0; pixels[14] = 255; pixels[15] = 255;
+                }
+            }
+        );
+
+        const imageData = map.captureImageData();
+
+        // After flip: row 0 of ImageData (top) should be blue (was top in GL)
+        expect(imageData.data[0]).toBe(0);    // R
+        expect(imageData.data[2]).toBe(255);   // B
+        // Row 1 of ImageData (bottom) should be red (was bottom in GL)
+        expect(imageData.data[8]).toBe(255);   // R
+        expect(imageData.data[10]).toBe(0);    // B
+    });
+
+    test('captureFramebuffer is null after capture completes', () => {
+        const container = window.document.createElement('div');
+        Object.defineProperty(container, 'clientWidth', {value: 64});
+        Object.defineProperty(container, 'clientHeight', {value: 64});
+        const map = createMap({container});
+
+        map.captureImageData();
+
+        expect(map.painter.captureFramebuffer).toBeNull();
+    });
+});

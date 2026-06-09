@@ -27,6 +27,7 @@ import {type Source} from '../source/source.ts';
 import {type StyleLayer} from '../style/style_layer.ts';
 import {Terrain} from '../render/terrain.ts';
 import {RenderToTexture} from '../webgl/render_to_texture.ts';
+import {Texture} from '../webgl/texture.ts';
 import {config} from '../util/config.ts';
 import {defaultLocale} from './default_locale.ts';
 import {MercatorTransform} from '../geo/projection/mercator_transform.ts';
@@ -3365,6 +3366,85 @@ export class Map extends Camera {
      */
     getCanvas(): HTMLCanvasElement {
         return this._canvas;
+    }
+
+    /**
+     * Renders the current map view to an {@link ImageData} object without requiring
+     * `preserveDrawingBuffer: true` on the WebGL context.
+     *
+     * The map is rendered into an offscreen framebuffer object (FBO) whose color attachment
+     * is always readable regardless of the `preserveDrawingBuffer` context attribute.
+     *
+     * **Note on alpha:** MapLibre's WebGL context uses `premultipliedAlpha: true`, so the
+     * returned pixel values are in premultiplied RGBA (each color channel is already multiplied
+     * by the alpha value). The {@link ImageData} spec expects straight (non-premultiplied) RGBA,
+     * so color values will be incorrect for semi-transparent pixels when passed to
+     * `CanvasRenderingContext2D.putImageData`. For fully opaque content (alpha = 255) — which
+     * is the common case for map tiles — premultiplied and straight alpha are equivalent and
+     * the result is correct.
+     *
+     * @returns An {@link ImageData} containing the rendered pixels.
+     * @example
+     * ```ts
+     * map.once('idle', () => {
+     *     const imageData = map.captureImageData();
+     *     const canvas = document.createElement('canvas');
+     *     canvas.width = imageData.width;
+     *     canvas.height = imageData.height;
+     *     canvas.getContext('2d').putImageData(imageData, 0, 0);
+     *     document.body.appendChild(canvas);
+     * });
+     * ```
+     */
+    captureImageData(): ImageData {
+        if (this._removed) {
+            throw new Error('captureImageData: map has been removed');
+        }
+        if (!this.style) {
+            throw new Error('captureImageData: style is not yet loaded');
+        }
+
+        const {painter} = this;
+        const {context} = painter;
+        const {gl} = context;
+        const {width, height} = painter;
+
+        // Lazily create or resize the capture FBO on the painter so repeated calls
+        // (e.g. one capture per tile) don't pay allocation cost every time.
+        if (!painter.captureFramebuffer || painter.captureFramebuffer.width !== width || painter.captureFramebuffer.height !== height) {
+            painter.captureFramebuffer?.destroy();
+            const fbo = context.createFramebuffer(width, height, true, true);
+            const texture = new Texture(context, {width, height, data: null}, gl.RGBA);
+            fbo.colorAttachment.set(texture.texture);
+            const depthRenderbuffer = context.createRenderbuffer(gl.DEPTH24_STENCIL8, width, height);
+            fbo.depthAttachment.set(depthRenderbuffer);
+            painter.captureFramebuffer = fbo;
+        }
+
+        painter._capturing = true;
+        try {
+            this.redraw();
+
+            context.bindFramebuffer.set(painter.captureFramebuffer.framebuffer);
+            const pixels = new Uint8Array(width * height * 4);
+            gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+            context.bindFramebuffer.set(null);
+
+            // WebGL pixel rows run bottom-to-top; flip in-place to match ImageData's top-to-bottom order.
+            const bytesPerRow = width * 4;
+            const tmp = new Uint8Array(bytesPerRow);
+            for (let top = 0, bot = height - 1; top < bot; top++, bot--) {
+                const topOff = top * bytesPerRow;
+                const botOff = bot * bytesPerRow;
+                tmp.set(pixels.subarray(topOff, topOff + bytesPerRow));
+                pixels.copyWithin(topOff, botOff, botOff + bytesPerRow);
+                pixels.set(tmp, botOff);
+            }
+
+            return new ImageData(new Uint8ClampedArray(pixels.buffer), width, height);
+        } finally {
+            painter._capturing = false;
+        }
     }
 
     _containerDimensions(): number[] {
