@@ -7,12 +7,12 @@ import {UnwrappedTileID, OverscaledTileID, type CanonicalTileID, calculateTileKe
 import {interpolates} from '@maplibre/maplibre-gl-style-spec';
 import {type PointProjection, xyTransformMat4} from '../../symbol/projection.ts';
 import {LngLatBounds} from '../lng_lat_bounds.ts';
-import {getMercatorHorizon, projectToWorldCoordinates, unprojectFromWorldCoordinates, calculateTileMatrix, maxMercatorHorizonAngle, cameraMercatorCoordinateFromCenterAndRotation} from './mercator_utils.ts';
+import {getMercatorHorizon, projectToWorldCoordinates, unprojectFromWorldCoordinates, maxMercatorHorizonAngle, cameraMercatorCoordinateFromCenterAndRotation} from './mercator_utils.ts';
 import {EXTENT} from '../../data/extent.ts';
 import {TransformHelper} from '../transform_helper.ts';
 import {MercatorCoveringTilesDetailsProvider} from './mercator_covering_tiles_details_provider.ts';
 import {Frustum} from '../../util/primitives/frustum.ts';
-import {fastInvertProjMat4} from '../../util/fast_maths.ts';
+import {fastInvertProjMat4, fastCalcTilePosMatrix} from '../../util/fast_maths.ts';
 
 import type {Terrain} from '../../render/terrain.ts';
 import type {IReadonlyTransform, ITransform, TransformConstrainFunction} from '../transform_interface.ts';
@@ -421,8 +421,16 @@ export class MercatorTransform implements ITransform {
             return useFloat32 ? matrices.f32 : matrices.f64;
         }
 
-        const tileMatrix = calculateTileMatrix(tileID, this.worldSize);
-        mat4.multiply(tileMatrix, aligned ? this._alignedProjMatrix : this._viewProjMatrix, tileMatrix);
+        const {canonical, wrap: tileWrap} = tileID;
+        const scale = this.worldSize / zoomScale(canonical.z);
+        const tileMatrix = createMat4f64();
+        fastCalcTilePosMatrix(
+            tileMatrix,
+            aligned ? this._alignedProjMatrix : this._viewProjMatrix,
+            scale / EXTENT,
+            (canonical.x + zoomScale(canonical.z) * tileWrap) * scale,
+            canonical.y * scale,
+        );
         const matrices: {f64: Mat4f64; f32: Mat4f32} = {
             f64: tileMatrix,
             f32: new Float32Array(tileMatrix), // Must have a 32 bit float version for WebGL, otherwise WebGL calls in Chrome get very slow.
@@ -439,8 +447,16 @@ export class MercatorTransform implements ITransform {
             return cache.get(posMatrixKey);
         }
 
-        const fogMatrix = calculateTileMatrix(unwrappedTileID, this.worldSize);
-        mat4.multiply(fogMatrix, this._fogMatrix, fogMatrix);
+        const {canonical, wrap: tileWrap} = unwrappedTileID;
+        const fogScale = this.worldSize / zoomScale(canonical.z);
+        const fogMatrix = createMat4f64();
+        fastCalcTilePosMatrix(
+            fogMatrix,
+            this._fogMatrix,
+            fogScale / EXTENT,
+            (canonical.x + zoomScale(canonical.z) * tileWrap) * fogScale,
+            canonical.y * fogScale,
+        );
 
         cache.set(posMatrixKey, new Float32Array(fogMatrix)); // Must be 32 bit floats, otherwise WebGL calls in Chrome get very slow.
         return cache.get(posMatrixKey);
@@ -819,8 +835,16 @@ export class MercatorTransform implements ITransform {
     getProjectionDataForCustomLayer(applyGlobeMatrix: boolean = true): CustomLayerProjectionData {
         const tileID = new OverscaledTileID(0, 0, 0, 0, 0);
         const rendererProjectionData = this.getProjectionData({overscaledTileID: tileID, applyGlobeMatrix});
-        const tileMatrix = calculateTileMatrix(tileID, this.worldSize);
-        mat4.multiply(tileMatrix, this._viewProjMatrix, tileMatrix);
+        const {canonical: clCanonical, wrap: clWrap} = tileID;
+        const clScale = this.worldSize / zoomScale(clCanonical.z);
+        const tileMatrix = createMat4f64();
+        fastCalcTilePosMatrix(
+            tileMatrix,
+            this._viewProjMatrix,
+            clScale / EXTENT,
+            (clCanonical.x + zoomScale(clCanonical.z) * clWrap) * clScale,
+            clCanonical.y * clScale,
+        );
 
         // Even though we requested projection data for the mercator base tile which covers the entire mercator range,
         // the shader projection machinery still expects inputs to be in tile units range [0..EXTENT].

@@ -52,6 +52,41 @@ export function fastInvertTransformMat4(dst: mat4, src: mat4): mat4{
 }
 
 /*
+Combined calculateTileMatrix + multiply in one pass, with no intermediate allocation.
+Equivalent to: tileMatrix = calculateTileMatrix(tileID, worldSize); mat4.multiply(dst, viewProj, tileMatrix)
+Caller supplies the three tile scalars directly:
+  s  = worldSize / zoomScale(z) / EXTENT
+  tx = unwrappedX * worldSize / zoomScale(z)
+  ty = canonicalY * worldSize / zoomScale(z)
+*/
+export function fastCalcTilePosMatrix(dst: mat4, viewProj: mat4, s: number, tx: number, ty: number): mat4 {
+    const a0 = viewProj[0], a1 = viewProj[1], a2 = viewProj[2], a3 = viewProj[3];
+    const a4 = viewProj[4], a5 = viewProj[5], a6 = viewProj[6], a7 = viewProj[7];
+
+    dst[12] = tx * a0 + ty * a4 + viewProj[12];
+    dst[13] = tx * a1 + ty * a5 + viewProj[13];
+    dst[14] = tx * a2 + ty * a6 + viewProj[14];
+    dst[15] = tx * a3 + ty * a7 + viewProj[15];
+
+    dst[0] = s * a0;
+    dst[1] = s * a1;
+    dst[2] = s * a2;
+    dst[3] = s * a3;
+
+    dst[4] = s * a4;
+    dst[5] = s * a5;
+    dst[6] = s * a6;
+    dst[7] = s * a7;
+
+    dst[8] = viewProj[8];
+    dst[9] = viewProj[9];
+    dst[10] = viewProj[10];
+    dst[11] = viewProj[11];
+
+    return dst;
+}
+
+/*
 Invert a perspective projection matrix
 dst and src are in column-major flat format
 */
